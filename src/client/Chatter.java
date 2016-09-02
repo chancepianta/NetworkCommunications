@@ -6,6 +6,7 @@ import java.io.PrintStream;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Scanner;
 
 public class Chatter {
 	public static void main(String[] args) {
@@ -22,18 +23,24 @@ public class Chatter {
 		hostName = args[1];
 		tcpPort = args[2];
 		
+		boolean needsToDoExit = true;
 		try {
 			String response = doTCPRequest("HELO", screenName, hostName, tcpPort);
 			if ( !isNullOrEmpty(response) && response.startsWith("ACPT") ) {
 				response = response.replaceAll("ACPT ", "");
 				List<String> clients = Arrays.asList(response.split(":"));
-				//Scanner sc = new Scanner(System.in);
-				
+				Scanner sc = new Scanner(System.in);
+				while (sc.hasNextLine()) {
+					
+				}
+			} else if ( !isNullOrEmpty(response) && response.startsWith("RJCT") ) {
+				System.out.println("Screen Name already exists: " + screenName);
 			}
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
 		} finally {
-			doTCPRequest("EXIT", null, null, null);
+			if ( needsToDoExit )
+				doTCPRequest("EXIT", null, null, null);
 		}
 	}
 	
