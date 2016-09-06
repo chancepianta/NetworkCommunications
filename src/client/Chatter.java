@@ -127,7 +127,7 @@ public class Chatter extends JFrame {
 								public void actionPerformed(ActionEvent actionEvent) {
 									// Send EXIT message to server
 									doTCPRequest("EXIT\n", null, null, null, null);
-									System.exit(1);
+									System.exit(0);
 								}
 							});
 				container.add(button, BorderLayout.SOUTH);
@@ -140,7 +140,7 @@ public class Chatter extends JFrame {
 								public void windowClosing(WindowEvent windowEvent) {
 									// Send EXIT message to server
 									doTCPRequest("EXIT\n", null, null, null, null);
-									System.exit(1);
+									System.exit(0);
 								}
 							});
 				
