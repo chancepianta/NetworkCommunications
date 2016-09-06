@@ -39,10 +39,10 @@ public class Chatter extends JFrame {
 	// This list should be populated originally with the data from the server's
 	// ACTP message and then clients will be added/removed in accordance to
 	// JOIN and EXIT messages sent from the membership server
-	List<String> clients;
+	private List<String> clients;
 	
 	// Screen name of user logged into client
-	String screenName;
+	private String screenName;
 	
 	// Attributes for UDP server
 	private Selector selector;
@@ -138,7 +138,9 @@ public class Chatter extends JFrame {
 				addWindowListener(
 							new WindowAdapter() {
 								public void windowClosing(WindowEvent windowEvent) {
-									System.exit(0);
+									// Send EXIT message to server
+									doTCPRequest("EXIT\n", null, null, null, null);
+									System.exit(1);
 								}
 							});
 				
