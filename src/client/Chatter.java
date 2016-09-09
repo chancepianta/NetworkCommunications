@@ -250,9 +250,8 @@ public class Chatter extends JFrame {
 			for (String client : clients) {
 				String[] clientValues = client.split(" ");
 				if ( !clientValues[0].equalsIgnoreCase(screenName) ) {
-					String host = clientValues[1];
 					String port = clientValues[2];
-					doUDPRequest(host, new Integer(port), command + " " + screenName + ": " + message + "\n");
+					doUDPRequest(clientValues[1], new Integer(port.replaceAll("\n", "").trim()), command + " " + screenName + ": " + message + "\n");
 				}
 			}
 		}
