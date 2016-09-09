@@ -21,6 +21,7 @@ import java.nio.channels.Channel;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -47,6 +48,9 @@ public class Chatter extends JFrame {
 	// Attributes for UDP server
 	private Selector selector;
 	private DatagramChannel udpChannel;
+	
+	// Attributes for TCP port to chat server
+	private Socket socket = null;
 	
 	
 	// Attributes for GUI
@@ -90,7 +94,8 @@ public class Chatter extends JFrame {
 				// This should then leave us with just the ':' separated list of clients
 				response = response.replaceAll("ACPT ", "");
 				// Split the clients up into a List data structure for easier handling of clients
-				clients = Arrays.asList(response.split(":"));
+				clients = new ArrayList<String>();
+				clients.addAll(Arrays.asList(response.split(":")));
 				
 				Container container = getContentPane();
 				
@@ -105,11 +110,12 @@ public class Chatter extends JFrame {
 										// Send the input text to the other clients
 										doUDPRequest("MESG", screenName, actionEvent.getActionCommand());
 										// Added the entered text to the text area of the gui
-										textArea.append("\n" + screenName + ": " + actionEvent.getActionCommand());
+										textArea.append(screenName + ": " + actionEvent.getActionCommand() + "\n");
 										// Clear out the text input field
 										textField.setText("");
 									} catch (Exception e) {
 										System.out.println("failed to send message " + actionEvent.getActionCommand());
+										System.out.println(e.getMessage());
 									}
 								}
 							});
@@ -125,9 +131,7 @@ public class Chatter extends JFrame {
 				button.addActionListener(
 							new ActionListener() {
 								public void actionPerformed(ActionEvent actionEvent) {
-									// Send EXIT message to server
-									doTCPRequest("EXIT\n", null, null, null, null);
-									System.exit(0);
+									doExit();
 								}
 							});
 				container.add(button, BorderLayout.SOUTH);
@@ -138,13 +142,11 @@ public class Chatter extends JFrame {
 				addWindowListener(
 							new WindowAdapter() {
 								public void windowClosing(WindowEvent windowEvent) {
-									// Send EXIT message to server
-									doTCPRequest("EXIT\n", null, null, null, null);
-									System.exit(0);
+									doExit();
 								}
 							});
 				
-				textArea.append("\n" + screenName + " has joined the chatroom");
+				textArea.append("\n" + screenName + " has joined the chatroom\n");
 			} else if ( !isNullOrEmpty(response) && response.startsWith("RJCT") ) {
 				System.out.println("Screen Name already exists: " + screenName);
 				System.exit(-1);
@@ -174,6 +176,18 @@ public class Chatter extends JFrame {
 		}
 	}
 	
+	private void doExit() {
+		doTCPRequest("EXIT\n", null, null, null, null);
+		if ( socket != null ) {
+			try {
+				socket.close();
+			} catch (IOException e) {
+				System.out.println(e.getMessage());
+			}
+		}
+		System.exit(0);
+	}
+	
 	private String handleInput(String input) {
 		String returnValue = "";
 		StringTokenizer tokenizer = new StringTokenizer(input);
@@ -182,10 +196,10 @@ public class Chatter extends JFrame {
 		if ( command == null || this.screenName.equalsIgnoreCase(screenName.replaceAll(":", "")) ) {
 			return returnValue;
 		} else if ( "MESG".equalsIgnoreCase(command) ) {
-			textArea.append("\n" + input.replaceAll("MESG ", ""));
+			textArea.append(input.replaceAll("MESG ", ""));
 		} else if ( "JOIN".equalsIgnoreCase(command) ) {
 			clients.add(input.replaceAll("JOIN ", ""));
-			textArea.append("\n" + screenName + " has joined the chatroom");
+			textArea.append(screenName + " has joined the chatroom\n");
 		} else if ( "EXIT".equalsIgnoreCase(command) ) {
 			String clientToRemove = "";
 			for (String client : clients) {
@@ -194,7 +208,7 @@ public class Chatter extends JFrame {
 				}
 			}
 			clients.remove(clientToRemove);
-			textArea.append("\n" + screenName + " has left the building");
+			textArea.append(screenName + " has left the building");
 		}
 		return returnValue;
 	}
@@ -202,7 +216,6 @@ public class Chatter extends JFrame {
 	private void handleUDPClient() {
 		try {
 			byte[] request = new byte[1024];
-			
 			udpChannel.receive(ByteBuffer.wrap(request));
 			String requestString = new String(request);
 			handleInput(requestString).getBytes();
@@ -213,7 +226,6 @@ public class Chatter extends JFrame {
 	
 	private String doTCPRequest(String command, String screenName, String hostName, String tcpPort, String udpPort) {
 		String response = "";
-		Socket socket = null;
 		try {
 			if ( socket == null )
 				socket = new Socket(hostName, Integer.parseInt(tcpPort));
@@ -237,17 +249,22 @@ public class Chatter extends JFrame {
 		if ( clients != null && !clients.isEmpty() ) {
 			for (String client : clients) {
 				String[] clientValues = client.split(" ");
-				doUDPRequest(clientValues[1], Integer.parseInt(clientValues[2]), command + " " + screenName + ": " + message + "\n");
+				if ( !clientValues[0].equalsIgnoreCase(screenName) ) {
+					String host = clientValues[1];
+					String port = clientValues[2];
+					doUDPRequest(host, new Integer(port), command + " " + screenName + ": " + message + "\n");
+				}
 			}
 		}
 	}
 	
 	private void doUDPRequest(String host, int port, String message) throws IOException {
 		InetAddress address = InetAddress.getByName(host);
-		DatagramSocket socket = new DatagramSocket();
+		DatagramSocket dSocket = new DatagramSocket();
 		byte[] outBuffer = message.getBytes();
 		DatagramPacket outPacket = new DatagramPacket(outBuffer, outBuffer.length, address, port);
-		socket.send(outPacket);
+		dSocket.send(outPacket);
+		dSocket.close();
 	}
 	
 	private boolean isNullOrEmpty(String string) {
