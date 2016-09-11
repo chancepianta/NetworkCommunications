@@ -5,6 +5,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
@@ -68,30 +71,42 @@ public class MemD {
 				DataOutputStream stream = new DataOutputStream(clientSocket.getOutputStream());
 				
 				String helo = reader.readLine();
+				System.out.println(helo);
 				if ( helo != null && !helo.isEmpty() && helo.startsWith("HELO") ) {
 					String[] heloParts = helo.split(" ");
 					if ( clients.hasClient(heloParts[1]) ) {
+						System.out.println("RJCT " + heloParts[1] + "\n");
 						stream.writeBytes("RJCT " + heloParts[1] + "\n");
-					}
-					
-					clients.addClient(heloParts[1], helo.replaceAll("HELO ", "").replaceAll("\n", "").trim());
-					
-					StringBuilder builder = new StringBuilder();
-					builder.append("ACPT ");
-					for (String client : clients.getClients()) {
-						builder.append(clients.getClient(client));
-						if ( clients.size() > 1 ) {
-							builder.append(":");
+					} else {
+						// Add connecting client to list of current clients
+						clients.addClient(heloParts[1], helo.replaceAll("HELO ", "").replaceAll("\n", "").trim());
+						
+						// Send accept message back to connecting client
+						StringBuilder builder = new StringBuilder();
+						builder.append("ACPT ");
+						boolean isFirst = true;
+						for (String client : clients.getClients()) {
+							if ( !isFirst ) {
+								builder.append(":");
+							} else {
+								isFirst = false;
+							}
+							builder.append(clients.getClient(client));
 						}
+						builder.append("\n");
+						stream.writeBytes(builder.toString());
+						
+						// Notify other current clients of the new client
+						notifyClients("JOIN " + helo.replace("HELO ", "").replace("\n", "").trim() + "\n");
+						
+						String exit = "";
+						while ( ( ( (exit = reader.readLine()) == null ) || !exit.startsWith("EXIT") )
+								&& clientSocket.isConnected() ) {}
+						
+						clients.removeClient(heloParts[1]); // remove exited client from list of current clients
+						
+						notifyClients("EXIT " + heloParts[1].trim() + "\n"); // notify the other clients of departure
 					}
-					builder.append("\n");
-
-					stream.writeBytes(builder.toString());
-					
-					String exit = null;
-					while ( (exit = reader.readLine()) == null ) {}
-					
-					System.out.println(exit);
 				} else {
 					throw new Exception("failed to read message");
 				}
@@ -102,6 +117,26 @@ public class MemD {
 	        		try { clientSocket.close(); } catch (Exception e) {}
 	        	}
 	        }
+	    }
+	    
+	    private void notifyClients(String message) {
+	    	for (String client : clients.getClients()) {
+	    		// Expect to store the client strings in the format
+	    		// <screenname> <hostname> <port>
+	    		// So clients parts will be a string array of index 0 = screename, index 1 = hostname, and index 2 = port
+	    		String[] clientParts = clients.getClient(client).split(" ");
+	    		try {
+	    			// Send out the message via UDP
+	    			InetAddress address = InetAddress.getByName(clientParts[1]);
+	    			DatagramSocket dSocket = new DatagramSocket();
+	    			byte[] byteBuffer = message.getBytes();
+	    			DatagramPacket dPacket = new DatagramPacket(byteBuffer, byteBuffer.length, address, Integer.parseInt(clientParts[2].trim()));
+	    			dSocket.send(dPacket);
+	    			dSocket.close();
+	    		} catch (Exception e) {
+	    			System.out.println(e.getMessage());
+	    		}
+	    	}
 	    }
 	}
 	
