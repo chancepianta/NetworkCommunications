@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -13,46 +12,24 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.StringTokenizer;
-//
-// Chance Pianta  cp33252
-// Abe Arredondo  aa44757
-// EE 382N: Distributed Systems Opt III PRC, Fall 2015
-// Dr Vijay K. Garg Professor, Wei-Lun-Hung Teaching Assistant 
-// The University of Texas at Austin
-// Cockrell School of Engineering 
-// September 17th, 2015
-//
+
 public class MemD {
 	ServerSocket serverSocket;
 	
-	Clients clients;
-	
 	public MemD(int tcpPort) throws IOException {
 		serverSocket = new ServerSocket(tcpPort);
-		clients = clients.INSTANCE;
 	}
 	
 	public void startServer() {
 		try {
 			while ( true ) {
 				Socket clientSocket = serverSocket.accept();
-				Thread thread = new Thread(new Client(clientSocket, this.clients));
+				Thread thread = new Thread(new Client(clientSocket, Clients.INSTANCE));
 				thread.start();
 			}
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
 		}
-	}
-	
-	private String handleInput(String input) {
-		String returnValue = "";
-		StringTokenizer tokenizer = new StringTokenizer(input);
-		String command = tokenizer.nextToken();
-		if ( command == null ) {
-			return returnValue;
-		}
-		return returnValue;
 	}
 	
 	public class Client implements Runnable{
@@ -66,16 +43,16 @@ public class MemD {
 	    }
 
 	    public void run() {
+	    	String helo = "";
+	    	boolean needsExitNotification = false;
 	        try {
 	        	BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 				DataOutputStream stream = new DataOutputStream(clientSocket.getOutputStream());
 				
-				String helo = reader.readLine();
-				System.out.println(helo);
+				helo = reader.readLine();
 				if ( helo != null && !helo.isEmpty() && helo.startsWith("HELO") ) {
 					String[] heloParts = helo.split(" ");
 					if ( clients.hasClient(heloParts[1]) ) {
-						System.out.println("RJCT " + heloParts[1] + "\n");
 						stream.writeBytes("RJCT " + heloParts[1] + "\n");
 					} else {
 						// Add connecting client to list of current clients
@@ -98,21 +75,24 @@ public class MemD {
 						
 						// Notify other current clients of the new client
 						notifyClients("JOIN " + helo.replace("HELO ", "").replace("\n", "").trim() + "\n");
+						needsExitNotification = true;
 						
+						// Wait for an exit message from a client or an abrupt closing of the TCP connection
 						String exit = "";
-						while ( ( ( (exit = reader.readLine()) == null ) || !exit.startsWith("EXIT") )
-								&& clientSocket.isConnected() ) {}
-						
-						clients.removeClient(heloParts[1]); // remove exited client from list of current clients
-						
-						notifyClients("EXIT " + heloParts[1].trim() + "\n"); // notify the other clients of departure
+						while ( (exit = reader.readLine()) != null && !exit.startsWith("EXIT") ) {}
 					}
 				} else {
 					throw new Exception("failed to read message");
 				}
 	        } catch (Exception e) {
-	        	System.out.println(e.getMessage());
+	        	System.out.println("error = " + e.getMessage());
 	        } finally {
+	        	if ( needsExitNotification ) {
+	        		// Let the current clients know of this client's exit
+	        		String[] heloParts = helo.split(" ");
+        			clients.removeClient(heloParts[1]); // remove exited client from list of current clients
+        			notifyClients("EXIT " + heloParts[1].trim() + "\n"); // notify the other clients of departure
+	        	}
 	        	if ( clientSocket != null ) {
 	        		try { clientSocket.close(); } catch (Exception e) {}
 	        	}
