@@ -233,12 +233,14 @@ public class Chatter extends JFrame {
 			PrintStream stream = new PrintStream(socket.getOutputStream());
 			if ( !isNullOrEmpty(screenName) 
 					&& !isNullOrEmpty(hostName) 
-					&& !isNullOrEmpty(udpPort) )
+					&& !isNullOrEmpty(udpPort) ) {
 				stream.println(command + " " + screenName + " " + hostName + " " + udpPort);
-			else
+				stream.flush();
+				response = reader.readLine();
+			} else {
 				stream.println(command);
-			stream.flush();
-			response = reader.readLine();
+				stream.flush();
+			}
 		} catch (Exception e) {
 			response = e.getMessage();
 		}
