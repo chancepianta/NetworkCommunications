@@ -208,7 +208,7 @@ public class Chatter extends JFrame {
 				}
 			}
 			clients.remove(clientToRemove);
-			textArea.append(screenName + " has left the building");
+			textArea.append(screenName + " has left the building\n");
 		}
 		return returnValue;
 	}
