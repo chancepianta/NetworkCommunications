@@ -75,7 +75,7 @@ public class Chatter extends JFrame {
 			
 			selector = Selector.open();
 			
-			InetAddress address = InetAddress.getByName(hostname);
+			InetAddress address = InetAddress.getByName("localhost");
 			// Get a port for our UDP server, passing a value of 0 will mean that the OS
 			// will assign us an available port to use
 			SocketAddress udpChannelPort = new InetSocketAddress(address, 0);
