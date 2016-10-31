@@ -107,8 +107,8 @@ def printStatistics(numTransmitted, numReceived, rtts):
 	packetLoss = float(0)
 	if numTransmitted > numReceived :
 		packetLoss = float(numTransmitted - numReceived) / float(numTransmitted)
-	print("%d packets transmitted, %d packets received, %f packet loss" % (numTransmitted, numReceived, packetLoss * float(100)))
-	print("round-trip min/avg/max/stddev = %f/%f/%f/f5 ms" % (minRtt, avgRtt, maxRtt))
+	print("%d packets transmitted, %d packets received, %.3f packet loss" % (numTransmitted, numReceived, packetLoss * float(100)))
+	print("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/f ms" % (minRtt, avgRtt, maxRtt))
 
 def ping(host, timeout=1):
 	# timeout=1 means: If one second goes by without a reply from the server,
