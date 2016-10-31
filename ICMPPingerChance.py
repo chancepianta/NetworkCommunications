@@ -4,7 +4,8 @@ import sys
 import struct
 import time
 import select
-import binascii  
+import binascii
+import numpy
 
 ICMP_ECHO_REQUEST = 8
 
@@ -95,24 +96,14 @@ def doOnePing(destAddr, timeout):
 def printStatistics(numTransmitted, rtts):
 	print("")
 	print("--- localhost ping statistics ---")
-	maxRtt = float(0)
-	minRtt = float(0)
-	totalRtt = float(0)
-	avgRtt = float(0)
 	packetLoss = float(0)
-	for rtt in rtts :
-		if rtt > maxRtt :
-			maxRtt = rtt
-		elif minRtt > rtt or minRtt == 0:
-			minRtt = rtt
-		totalRtt += float(rtt)
 	if len(rtts) == 0 :
 		packetLoss = float(1)
 	elif numTransmitted > len(rtts) :
 		avgRtt = totalRtt / float(len(rtts))
 		packetLoss = ( float(numTransmitted - len(rtts)) / float(numTransmitted) )
 	print("%d packets transmitted, %d packets received, %.3f%% packet loss" % (numTransmitted, len(rtts), packetLoss * float(100)))
-	print("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/f ms" % (minRtt, avgRtt, maxRtt))
+	print("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms" % (numpy.amin(rtts), numpy.average(rtts), numpy.amax(rtts), numpy.std(rtts)))
 
 def ping(host, timeout=1):
 	# timeout=1 means: If one second goes by without a reply from the server,
