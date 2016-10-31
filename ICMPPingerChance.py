@@ -92,25 +92,29 @@ def doOnePing(destAddr, timeout):
 	mySocket.close()
 	return delay
 
-def printStatistics(numTransmitted, numReceived, rtts):
+def printStatistics(numTransmitted, rtts):
 	print("--- localhost ping statistics ---")
 	maxRtt = float(0)
 	minRtt = float(0)
 	totalRtt = float(0)
+	avgRtt = float(0)
+	packetLoss = float(0)
+	print("numTransmitted=%d, numReceived=%d" % (numTransmitted, len(rtts)))
 	for rtt in rtts :
 		if rtt > maxRtt :
 			maxRtt = rtt
 		elif minRtt > rtt or minRtt == 0:
 			minRtt = rtt
 		totalRtt += float(rtt)
-	avgRtt = totalRtt / float(len(rtts))
-	packetLoss = float(0)
-	if numTransmitted > numReceived :
-		packetLoss = float(numTransmitted - numReceived) / float(numTransmitted) * 100
-	print("%d packets transmitted, %d packets received, %.3f%% packet loss" % (numTransmitted, numReceived, packetLoss * float(100)))
+	if len(rtts) == 0 :
+		packetLoss = float(1)
+	elif numTransmitted > len(rtts) :
+		avgRtt = totalRtt / float(len(rtts))
+		packetLoss = ( float(numTransmitted - len(rtts)) / float(numTransmitted) )
+	print("%d packets transmitted, %d packets received, %.3f%% packet loss" % (numTransmitted, len(rtts), packetLoss * float(100)))
 	print("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/f ms" % (minRtt, avgRtt, maxRtt))
 
-def ping(host, timeout=1):
+def ping(host, timeout=.01):
 	# timeout=1 means: If one second goes by without a reply from the server,
 	# the client assumes that either the client's ping or the server's pong is lost
 	dest = gethostbyname(host)
@@ -128,7 +132,7 @@ def ping(host, timeout=1):
 			rtts.append(delay['time'])
 		numTransmitted += 1
 		time.sleep(1)# one second
-	printStatistics(numTransmitted, len(rtts), rtts)
+	printStatistics(numTransmitted, rtts)
 
 #ping("google.com")
-ping("localhost")
+ping("google.com")
