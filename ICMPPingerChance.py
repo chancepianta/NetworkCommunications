@@ -93,13 +93,13 @@ def doOnePing(destAddr, timeout):
 	return delay
 
 def printStatistics(numTransmitted, rtts):
+	print("")
 	print("--- localhost ping statistics ---")
 	maxRtt = float(0)
 	minRtt = float(0)
 	totalRtt = float(0)
 	avgRtt = float(0)
 	packetLoss = float(0)
-	print("numTransmitted=%d, numReceived=%d" % (numTransmitted, len(rtts)))
 	for rtt in rtts :
 		if rtt > maxRtt :
 			maxRtt = rtt
@@ -114,7 +114,7 @@ def printStatistics(numTransmitted, rtts):
 	print("%d packets transmitted, %d packets received, %.3f%% packet loss" % (numTransmitted, len(rtts), packetLoss * float(100)))
 	print("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/f ms" % (minRtt, avgRtt, maxRtt))
 
-def ping(host, timeout=.01):
+def ping(host, timeout=1):
 	# timeout=1 means: If one second goes by without a reply from the server,
 	# the client assumes that either the client's ping or the server's pong is lost
 	dest = gethostbyname(host)
@@ -123,16 +123,19 @@ def ping(host, timeout=.01):
 	print("Pinging " + dest + " using Python:")
 	print("")
 	# Send ping requests to a server separated by approximately one second
-	for index in range(0, 10) :
-		delay = doOnePing(dest, timeout)
-		if 'timedout' in delay :
-			print("Request timeout")
-		else :
-			print("Reply from %s: bytes=%d time=%fms TTL=%d" % (delay['addr'], len(delay['packet']), delay['time'], delay['ttl']))
-			rtts.append(delay['time'])
-		numTransmitted += 1
-		time.sleep(1)# one second
-	printStatistics(numTransmitted, rtts)
+	try :
+		while 1 :
+			delay = doOnePing(dest, timeout)
+			if 'timedout' in delay :
+				print("Request timed out.")
+			else :
+				print("Reply from %s: bytes=%d time=%fms TTL=%d" % (delay['addr'], len(delay['packet']), delay['time'], delay['ttl']))
+				rtts.append(delay['time'])
+			numTransmitted += 1
+			time.sleep(1)# one second
+	except KeyboardInterrupt :
+		printStatistics(numTransmitted, rtts)
+		sys.exit(0)
 
 #ping("google.com")
 ping("google.com")
