@@ -36,7 +36,7 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
 		whatReady = select.select([mySocket], [], [], timeLeft)
 		howLongInSelect = (time.time() - startedSelect)
 		if whatReady[0] == [] : # Timeout
-			return "Request timed out."
+			return { 'timedout': True }
 		timeReceived = time.time() 
 		recPacket, addr = mySocket.recvfrom(1024)
 		#Fill in start
@@ -106,8 +106,8 @@ def printStatistics(numTransmitted, numReceived, rtts):
 	avgRtt = totalRtt / float(len(rtts))
 	packetLoss = float(0)
 	if numTransmitted > numReceived :
-		packetLoss = float(numTransmitted - numReceived) / float(numTransmitted)
-	print("%d packets transmitted, %d packets received, %.3f packet loss" % (numTransmitted, numReceived, packetLoss * float(100)))
+		packetLoss = float(numTransmitted - numReceived) / float(numTransmitted) * 100
+	print("%d packets transmitted, %d packets received, %.3f%% packet loss" % (numTransmitted, numReceived, packetLoss * float(100)))
 	print("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/f ms" % (minRtt, avgRtt, maxRtt))
 
 def ping(host, timeout=1):
@@ -115,15 +115,20 @@ def ping(host, timeout=1):
 	# the client assumes that either the client's ping or the server's pong is lost
 	dest = gethostbyname(host)
 	rtts = list()
+	numTransmitted = 0
 	print("Pinging " + dest + " using Python:")
 	print("")
 	# Send ping requests to a server separated by approximately one second
 	for index in range(0, 10) :
 		delay = doOnePing(dest, timeout)
-		print("Reply from %s: bytes=%d time=%fms TTL=%d" % (delay['addr'], len(delay['packet']), delay['time'], delay['ttl']))
-		rtts.append(delay['time'])
+		if 'timedout' in delay :
+			print("Request timeout")
+		else :
+			print("Reply from %s: bytes=%d time=%fms TTL=%d" % (delay['addr'], len(delay['packet']), delay['time'], delay['ttl']))
+			rtts.append(delay['time'])
+		numTransmitted += 1
 		time.sleep(1)# one second
-	printStatistics(10, 9, rtts)
+	printStatistics(numTransmitted, len(rtts), rtts)
 
 #ping("google.com")
 ping("localhost")
