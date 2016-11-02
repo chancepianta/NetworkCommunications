@@ -100,7 +100,6 @@ def printStatistics(numTransmitted, rtts):
 	if len(rtts) == 0 :
 		packetLoss = float(1)
 	elif numTransmitted > len(rtts) :
-		avgRtt = totalRtt / float(len(rtts))
 		packetLoss = ( float(numTransmitted - len(rtts)) / float(numTransmitted) )
 	print("%d packets transmitted, %d packets received, %.3f%% packet loss" % (numTransmitted, len(rtts), packetLoss * float(100)))
 	print("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms" % (numpy.amin(rtts), numpy.average(rtts), numpy.amax(rtts), numpy.std(rtts)))
@@ -129,4 +128,4 @@ def ping(host, timeout=1):
 		sys.exit(0)
 
 #ping("google.com")
-ping("google.com")
+ping("ftp.tku.edu.tw")
